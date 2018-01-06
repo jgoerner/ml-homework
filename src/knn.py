@@ -1,7 +1,9 @@
 import numpy as np
-from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from scipy.spatial import KDTree
+from sklearn.metrics.regression import mean_squared_error as mse
 
+########## CLASSIFIER ##########
 class KNNC(BaseEstimator, ClassifierMixin):
     
     def __init__(self, k=4, search="brute"):
@@ -82,3 +84,55 @@ class KNNC(BaseEstimator, ClassifierMixin):
             np.concatenate((lbls, self._labels)),
             return_counts=True)
         return (c-1)/np.sum((c-1))
+    
+########## REGRESSOR ##########
+class KNNR(BaseEstimator, RegressorMixin):
+
+    def __init__(self, k=4, search="brute", combiner="average"):
+        self.k = k
+        self.search = search
+        self.combiner = combiner
+        
+    def fit(self, X, y):
+        self._points = X
+        self._targets = y
+        self.kdt = KDTree(X)
+    
+    def predict(self, X):
+        # get nearest neighbors
+        knn = np.apply_along_axis(
+            lambda x: self._calc_distance(x),
+            axis=1,
+            arr = np.atleast_2d(X)
+        )
+        # score the nearest neighbors
+        scores = np.apply_along_axis(
+            lambda x: self._combine(self._targets[x]),
+            axis=1,
+            arr = np.atleast_2d(knn)
+        )
+        return scores
+        
+    def _combine(self, nn):
+        if self.combiner == "average":
+            result = np.mean(nn)
+        elif self.combiner == "median":
+            result = np.median(nn)
+        else:
+            raise NotImplementedError("{} is not implemented".format(self.combiner))
+        return result
+        
+    def score(self, X, y):
+        pred = self.predict(X)
+        return mse(y, pred)
+        
+    def _calc_distance(self, x):
+        if self.search == "brute":
+            dists = np.linalg.norm(np.ones_like(self._points)*x - self._points, axis=1)
+            sorted_dists = np.argsort(dists)
+            result = sorted_dists[:self.k]
+        elif self.search == "kdtree":
+            result = np.array([self.kdt.query(x, self.k)[1]])
+        else:
+            raise NotImplementedError("{} is not implemented".format(self.search))
+        return result

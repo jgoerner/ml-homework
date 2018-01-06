@@ -1,15 +1,18 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
+from scipy.spatial import KDTree
 
 class KNNC(BaseEstimator, ClassifierMixin):
     
-    def __init__(self, k=4):
+    def __init__(self, k=4, search="brute"):
         self.k = k
+        self.search = search
         
     def fit(self, X, y):
         self._points = X
         self._label_list = y
         self._labels = np.unique(y)
+        self.kdt = KDTree(X)
     
     def predict(self, X):
         # get nearest neighbors
@@ -59,9 +62,13 @@ class KNNC(BaseEstimator, ClassifierMixin):
         return np.sum(np.equal(pred, y))/len(y)
     
     def _calc_distance(self, x):
-        dists = np.linalg.norm(np.ones_like(self._points)*x - self._points, axis=1)
-        sorted_dists = np.argsort(dists)
-        return sorted_dists[:self.k]
+        if self.search == "brute":
+            dists = np.linalg.norm(np.ones_like(self._points)*x - self._points, axis=1)
+            sorted_dists = np.argsort(dists)
+            result = sorted_dists[:self.k]
+        elif self.search == "kdtree":
+            result = np.array([self.kdt.query(x, self.k)[1]])
+        return result
     
     def _decode_labels(self, idx):
         return self._label_list[idx]

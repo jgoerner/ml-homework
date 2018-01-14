@@ -1,3 +1,4 @@
+# %load src/linear_models.py
 # %load ./src/linear_models.py
 import numpy as np
 import pandas as pd
@@ -17,11 +18,13 @@ def build_design_matrix(X, PHI):
     dm: pandas-DataFrame
         design matrix
     """
-    dm = pd.DataFrame(np.array([
-        PHI["phi_0"](X),
-        PHI["phi_1"](X),
-        PHI["phi_2"](X),
-    ]).T, columns=list(PHI.keys()))
+    results = []
+    for k in PHI.keys():
+        results.append(PHI[k](X))
+    dm = pd.DataFrame(
+        np.array(results).T,
+        columns=PHI.keys()
+    )
     return dm
 
 def maximum_likelihood_regression(X, PHI, Y, reg=0):

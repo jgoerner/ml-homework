@@ -1,3 +1,4 @@
+# %load ./src/linear_models.py
 import numpy as np
 import pandas as pd
 
@@ -23,7 +24,7 @@ def build_design_matrix(X, PHI):
     ]).T, columns=list(PHI.keys()))
     return dm
 
-def maximum_likelihood_regression(X, PHI, Y):
+def maximum_likelihood_regression(X, PHI, Y, reg=0):
     """Calculate maximum likelihood parameter
     
     Parameter
@@ -34,6 +35,8 @@ def maximum_likelihood_regression(X, PHI, Y):
         basis functions
     Y: array-like,
         target vector
+    reg: float, default = 0
+        parameter of l2 regularization
     
     Returns
     -------
@@ -43,8 +46,14 @@ def maximum_likelihood_regression(X, PHI, Y):
     # get the design matrix
     DM = build_design_matrix(X, PHI).values
     
+    # get the regularizatioin weights
+    L = np.identity(DM.shape[1]) * reg
+    
     # convert to matrices to ease multiplication
     DMM = np.matrix(DM)
+    LM = np.matrix(L)
     YM = np.matrix(np.atleast_2d(Y).T)
-    WM = np.linalg.inv(DMM.T*DM)*DMM.T*YM
+    
+    # compute parameter
+    WM = np.linalg.inv(DMM.T*DM+LM)*DMM.T*YM
     return np.squeeze(np.asarray(WM))

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
+from sklearn.preprocessing import LabelBinarizer
 from scipy import stats
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -63,6 +64,40 @@ class BayesRegressor(BaseEstimator, RegressorMixin):
         Y_ = np.matrix(np.atleast_2d(Y).reshape(-1, 1))
         # return M_post
         return self._update_S(X) * (np.linalg.inv(self.S_prior)*self.M_prior + self.b*DM.T*Y_)
+    
+########## CLASSIFIER ##########
+class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
+    
+    def __init__(self):
+        self.lb = LabelBinarizer()
+        self.W_opt = None
+    
+    def fit(self, X, y):
+        X_ = self._add_dummy(X)
+        T_ = np.matrix(self.lb.fit_transform(y))
+        self.W_opt = np.linalg.pinv(X_)*T_
+        
+    def predict(self, X):
+        X_ = self._add_dummy(X)
+        preds = (self.W_opt.T * X_.T).T
+        return self.lb.inverse_transform(preds)
+    
+    def _add_dummy(self, X):
+        return np.matrix(np.hstack([np.ones((X.shape[0],1)), X]))
+    
+    def discriminant_functions(self):
+        if self.W_opt is None:
+            raise ValueError("You first have to call fit")
+        # build the template
+        template = "f_{}(x) = {:.03f}"
+        for i in range(1, self.W_opt.shape[0]):
+            template += " {:+.03f}" + "x_{}".format(i)
+
+        # fill the template
+        for idx, row in enumerate(self.W_opt.T, start=1):
+            params = [idx]
+            params += list(np.squeeze(np.asarray(row)))
+            print(template.format(*params))
     
 ########## UTILS ##########
 def build_design_matrix(X, PHI):

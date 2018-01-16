@@ -81,10 +81,16 @@ def plot_decision_planes(lsc, xmin, xmax, ymin, ymax, resolution=100):
     """
     w = lsc.W_opt
     x = np.linspace(xmin, xmax, resolution)
-    for f1, f2 in combinations(w.T, 2):
-        x2 = get_x2(f1, f2, x)
+    # check for binary classification
+    if w.shape[1] < 2:
+        params = w.T.A.flatten()
+        x2 = (params[0] + params[1]*x) / -params[2]
         plt.plot(x, x2, c="k", linestyle="--", alpha=0.3)
-    plt.ylim(ymin, ymax);  
+    else:
+        for f1, f2 in combinations(w.T, 2):
+            x2 = get_x2(f1, f2, x)
+            plt.plot(x, x2, c="k", linestyle="--", alpha=0.3)
+    plt.ylim(ymin, ymax); 
     
 def get_x2(f1, f2, x):
     """Helper to extract x2 from two discriminant functions

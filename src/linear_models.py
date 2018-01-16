@@ -71,16 +71,26 @@ class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self):
         self.lb = LabelBinarizer()
         self.W_opt = None
+        self.binary = False
     
     def fit(self, X, y):
         X_ = self._add_dummy(X)
-        T_ = np.matrix(self.lb.fit_transform(y))
+        # inspect if two or more classes
+        if len(np.unique(y)) > 2:
+            self.binary = False
+            T_ = np.matrix(self.lb.fit_transform(y))
+        else:
+            self.binary = True
+            T_ = np.matrix(y)
         self.W_opt = np.linalg.pinv(X_)*T_
         
     def predict(self, X):
         X_ = self._add_dummy(X)
         preds = (self.W_opt.T * X_.T).T
-        return self.lb.inverse_transform(preds)
+        if self.binary:
+            return np.sign(preds)
+        else:
+            return self.lb.inverse_transform(preds)
     
     def _add_dummy(self, X):
         return np.matrix(np.hstack([np.ones((X.shape[0],1)), X]))

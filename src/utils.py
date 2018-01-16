@@ -1,3 +1,5 @@
+from itertools import combinations
+
 import numpy as np
 import matplotlib.pyplot as plt
 from mlxtend.plotting import plot_confusion_matrix
@@ -58,3 +60,80 @@ def multiclass_confusion_matrix(y, y_pred, name="", only_wrong=False, figsize=(5
     plt.tight_layout()
 
     return cm, label_dict
+
+def plot_decision_planes(lsc, xmin, xmax, ymin, ymax, resolution=100):
+    """Plot decision planes of a Least-Squares-Classifier
+    
+    Parameters
+    ----------
+    lsc: LeastSquaresClassifier
+        classifier to be investigated
+    xmin: float,
+        minimal x to plot
+    xmax: float,
+        maximal x to plot
+    ymin: float,
+        minimal y to plot
+    ymax: float,
+        maximal y to plot
+    resolution: int, default=100
+        resolution of the plot
+    """
+    w = lsc.W_opt
+    x = np.linspace(xmin, xmax, resolution)
+    for f1, f2 in combinations(w.T, 2):
+        x2 = get_x2(f1, f2, x)
+        plt.plot(x, x2, c="k", linestyle="--", alpha=0.3)
+    plt.ylim(ymin, ymax);  
+    
+def get_x2(f1, f2, x):
+    """Helper to extract x2 from two discriminant functions
+    
+    Parameters
+    ----------
+    f1: 1-d matrix,
+        parameter of first discriminant function
+    f2: 1-d matrix,
+        parameter of second discriminant function
+    x: array-like,
+        array of x input values
+    
+    Returns
+    -------
+    x2: array-like,
+        other x coordinate
+    """
+    num, denom = np.split((f1-f2).A.flatten(), [-1])
+    x2 = - np.dot(num, np.vstack([np.ones_like(x), x])) / denom
+    return x2
+
+def plot_decision_regions(lsc, xmin, xmax, ymin, ymax, resolution=100):
+    """Plot decision regions for a classifier
+    
+    Parameters
+    ----------
+    lsc: LeastSquaresClassifier
+        classifier to be investigated
+    xmin: float,
+        minimal x to plot
+    xmax: float,
+        maximal x to plot
+    ymin: float,
+        minimal y to plot
+    ymax: float,
+        maximal y to plot
+    resolution: int, default=100
+        resolution of the plot
+    """
+    xx1, xx2 = np.meshgrid(
+        np.linspace(xmin, xmax, resolution),
+        np.linspace(ymin, ymax, resolution),
+    )
+    cls = lsc.predict(np.matrix(np.vstack([xx1.ravel(), xx2.ravel()]).T))
+    plt.contourf(
+        xx1,
+        xx2,
+        cls.reshape(xx1.shape),
+        alpha=0.25,
+        cmap="rainbow"
+    )

@@ -67,6 +67,7 @@ class BayesRegressor(BaseEstimator, RegressorMixin):
     
 ########## CLASSIFIER ##########
 class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
+    """Linear Classifer trained on Least Squares"""
     
     def __init__(self):
         self.lb = LabelBinarizer()
@@ -74,6 +75,16 @@ class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
         self.binary = False
     
     def fit(self, X, y):
+        """Fit the Classifier to the data set
+        
+        Parameter
+        ---------
+        X: array-like
+            input vectors
+            
+        y: array-like
+            target vector
+        """
         X_ = self._add_dummy(X)
         # inspect if two or more classes
         if len(np.unique(y)) > 2:
@@ -85,6 +96,18 @@ class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
         self.W_opt = np.linalg.pinv(X_)*T_
         
     def predict(self, X):
+        """Predict the class of unseen data
+        
+        Parameter
+        ---------
+        X: array-like
+            unsee input vectors
+            
+        Returns
+        -------
+        preds: array-like
+            classes of unseen data
+        """
         X_ = self._add_dummy(X)
         preds = (self.W_opt.T * X_.T).T
         if self.binary:
@@ -93,9 +116,23 @@ class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
             return self.lb.inverse_transform(preds)
     
     def _add_dummy(self, X):
+        """Add a dummy input for bias weight
+        
+        Parameter
+        ---------
+        X: array-like
+            input vectors
+            
+        Returns
+        -------
+        X_: array-like
+            input vectors including
+            ones for bias weight
+        """
         return np.matrix(np.hstack([np.ones((X.shape[0],1)), X]))
     
     def discriminant_functions(self):
+        """Print the discriminant function"""
         if self.W_opt is None:
             raise ValueError("You first have to call fit")
         # build the template

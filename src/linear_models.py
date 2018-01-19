@@ -8,8 +8,20 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 ########## REGRESSOR ##########
-from sklearn.base import BaseEstimator, RegressorMixin
-from scipy import stats
+class LeastSquaresRegressor(BaseEstimator, RegressorMixin):
+    
+    def __init__(self, phi, reg=0):
+        self.phi = phi
+        self.reg = reg
+        self.w = None
+        
+    def fit(self, X, y):
+        self.w = maximum_likelihood_regression(X, self.phi, y, reg=self.reg)
+        
+    def predict(self, X):
+        return np.dot(self.w, build_design_matrix(X, self.phi).T)
+
+
 class BayesRegressor(BaseEstimator, RegressorMixin):
     
     def __init__(self, phi, a, b_std, M0=None):

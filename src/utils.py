@@ -113,12 +113,12 @@ def get_x2(f1, f2, x):
     x2 = - np.dot(num, np.vstack([np.ones_like(x), x])) / denom
     return x2
 
-def plot_decision_regions(lsc, xmin, xmax, ymin, ymax, resolution=100):
+def plot_decision_regions(clf, xmin, xmax, ymin, ymax, resolution=100):
     """Plot decision regions for a classifier
     
     Parameters
     ----------
-    lsc: LeastSquaresClassifier
+    clf: Classifier
         classifier to be investigated
     xmin: float,
         minimal x to plot
@@ -135,7 +135,7 @@ def plot_decision_regions(lsc, xmin, xmax, ymin, ymax, resolution=100):
         np.linspace(xmin, xmax, resolution),
         np.linspace(ymin, ymax, resolution),
     )
-    cls = lsc.predict(np.matrix(np.vstack([xx1.ravel(), xx2.ravel()]).T))
+    cls = clf.predict(np.matrix(np.vstack([xx1.ravel(), xx2.ravel()]).T))
     plt.contourf(
         xx1,
         xx2,

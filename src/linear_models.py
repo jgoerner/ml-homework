@@ -158,6 +158,58 @@ class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
             params += list(np.squeeze(np.asarray(row)))
             print(template.format(*params))
     
+    
+class FisherClassifier(BaseEstimator, ClassifierMixin):
+    
+    def __init__(self):
+        self.w = None
+        self.th = None
+        self.cls_greater_th = None
+    
+    def fit(self, X, y):
+        # check for non binary classification
+        cls = np.unique(y)
+        if len(cls) != 2:
+            raise NotImplementedError("Currently only two class separation implemented")
+
+        # compute means and variances per class
+        mu1 = np.mat(X[y==cls[0]]).mean(axis=0).T
+        mu2 = np.mat(X[y==cls[1]]).mean(axis=0).T
+        s1 = (X[y==cls[0]].T - mu1) * (X[y==cls[0]].T - mu1).T
+        s2 = (X[y==cls[1]].T - mu2) * (X[y==cls[1]].T - mu2).T
+        self.w = np.linalg.inv(s1+s2) * (mu2 - mu1)
+        
+        # get optimal threshold
+        kde1 = self._kde(X[y==cls[0]] * self.w)
+        kde2 = self._kde(X[y==cls[1]] * self.w)
+        lower, upper = (X*self.w).min(), (X*self.w).max()
+        self.th = self._optimal_theta(kde1, kde2, lower, upper)
+        
+        # align kdes depending on theta
+        peak1 = self._peak_kde(kde1, lower, upper)
+        peak2 = self._peak_kde(kde2, lower, upper)
+        if peak1 > peak2:
+            self.cls_greater_th = {True: cls[0], False: cls[1]}
+        else:
+            self.cls_greater_th = {True: cls[1], False: cls[0]}
+        
+    def predict(self, X):
+        x_1d = np.squeeze(np.asarray(np.mat(X) * self.w))
+        pred = list(map(lambda p: self.cls_greater_th[p], x_1d >= self.th))
+        return np.array(pred)
+    
+    def _kde(self, X):
+        X = np.squeeze(np.asarray(X))
+        return stats.gaussian_kde(X)
+    
+    def _optimal_theta(self, kde1, kde2, lower, upper, res=100):
+        diff = np.abs(kde1.pdf(np.linspace(lower, upper, res)) - kde2.pdf(np.linspace(lower, upper, res)))
+        return np.linspace(lower, upper, res)[np.argmin(diff)]
+    
+    def _peak_kde(self, kde, lower, upper, res=100):
+        peak_idx = np.argmax(kde.pdf(np.linspace(lower, upper, res)))
+        return np.linspace(lower, upper, res)[peak_idx]
+    
 ########## UTILS ##########
 def build_design_matrix(X, PHI):
     """Build the design matrix

@@ -9,20 +9,63 @@ from mpl_toolkits.mplot3d import Axes3D
 
 ########## REGRESSOR ##########
 class LeastSquaresRegressor(BaseEstimator, RegressorMixin):
+    """Least Squares Regression
     
+    Parameter
+    ---------
+    phi: dict,
+        dict of design matrix transformations    
+    reg: float
+        factor of l2 regularization
+    """
     def __init__(self, phi, reg=0):
         self.phi = phi
         self.reg = reg
         self.w = None
         
     def fit(self, X, y):
+        """Fit the Regressor to the data set
+        
+        Parameter
+        ---------
+        X: array-like
+            input vectors
+            
+        y: array-like
+            target vector
+        """
         self.w = maximum_likelihood_regression(X, self.phi, y, reg=self.reg)
         
     def predict(self, X):
+        """Predict the value of unseen data
+        
+        Parameter
+        ---------
+        X: array-like
+            unsee input vectors
+            
+        Returns
+        -------
+        preds: array-like
+            estimated value of unseen data
+        """
         return np.dot(self.w, build_design_matrix(X, self.phi).T)
 
 
 class BayesRegressor(BaseEstimator, RegressorMixin):
+    """Bayesian Regression
+    
+    Parameter
+    ---------
+    phi: dict,
+        dict of design matrix transformations 
+    a: float,
+        used for covariance matrix initialization 
+    b_std: float,
+        used as prior of std 
+    M0: array-like,
+        prior means of the multivariate gauss
+    """
     
     def __init__(self, phi, a, b_std, M0=None):
         # misc attributes
@@ -40,18 +83,55 @@ class BayesRegressor(BaseEstimator, RegressorMixin):
         )
     
     def predict(self, X):
+        """Predict the value of unseen data
+        
+        Parameter
+        ---------
+        X: array-like
+            unsee input vectors
+            
+        Returns
+        -------
+        mu: array-like,
+            estimated means of unseen data
+        sig: array-like,
+            estimated std of unseen data
+        """
         DM = np.matrix(build_design_matrix(X, self.phi))
         mu = np.squeeze(np.asarray(self.M_prior.T*DM.T))
         sig = np.squeeze(np.asarray(np.sqrt(np.diag(DM*self.S_prior*DM.T))))
         return mu, sig
     
     def fit(self, X, Y):
+        """Fit the Regressor to the data set
+        
+        Parameter
+        ---------
+        X: array-like
+            input vectors
+        Y: array-like
+            target vector
+        """
         S_post = self._update_S(X)
         M_post = self._update_M(X, Y)
         self.b = self._update_beta(X, Y)
         self._update_belief(M_post, S_post)
     
     def _update_belief(self, M_post, S_post):
+        """Update internal priors
+        
+        Parameter
+        ---------
+        M_post: array-like,
+            posterior mus
+        S_post: array-like,
+            posterior stds
+            
+        Returns
+        -------
+        success: boolean,
+            update was successful
+        """
         self.M_prior = M_post
         self.S_prior = S_post
         self.prior = stats.multivariate_normal(
@@ -61,22 +141,63 @@ class BayesRegressor(BaseEstimator, RegressorMixin):
         return True
     
     def _update_beta(self, X, Y):
+        """Update confidence
+        
+        Parameter
+        ---------
+        X: array-like,
+            input vectors
+        Y: array-like,
+            target vectors
+            
+        Returns
+        -------
+        beta: float,
+            std of beliefs
+        """
         DM = np.matrix(build_design_matrix(X, self.phi))
         self._seen_samples += 1
         return self._seen_samples / np.linalg.norm(np.matrix(Y).T - DM*self.M_prior)
     
     def _update_S(self, X):
+        """Update stds
+        
+        Parameter
+        ---------
+        X: array-like,
+            input vectors
+        
+        Returns
+        -------
+        s_updated: array-like,
+            updated std of beliefs
+        """
         DM = np.matrix(build_design_matrix(X, self.phi))
         return np.linalg.inv(np.linalg.inv(self.S_prior) + self.b*DM.T*DM)
     
     def _update_M(self, X, Y):
+        """Update mus
+        
+        Parameter
+        ---------
+        X: array-like,
+            input vectors
+        Y: array-like,
+            target vectors
+        
+        Returns
+        -------
+        s_updated: array-like,
+            updated mus of beliefs
+        """
         # get design matrix
         DM = np.matrix(build_design_matrix(X, self.phi))
         # reshape Y
         Y_ = np.matrix(np.atleast_2d(Y).reshape(-1, 1))
         # return M_post
-        return self._update_S(X) * (np.linalg.inv(self.S_prior)*self.M_prior + self.b*DM.T*Y_)
-    
+        return self._update_S(X) * (np.linalg.inv(self.S_prior)*self.M_prior + self.b*DM.T*Y_)   
+
+
 ########## CLASSIFIER ##########
 class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
     """Linear Classifer trained on Least Squares"""
@@ -160,6 +281,7 @@ class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
     
     
 class FisherClassifier(BaseEstimator, ClassifierMixin):
+    """Classifier based on Fisher's discriminant function"""
     
     def __init__(self):
         self.w = None
@@ -167,6 +289,15 @@ class FisherClassifier(BaseEstimator, ClassifierMixin):
         self.cls_greater_th = None
     
     def fit(self, X, y):
+        """Fit the Classifier to the data set
+        
+        Parameter
+        ---------
+        X: array-like
+            input vectors
+        y: array-like
+            target vector
+        """
         # check for non binary classification
         cls = np.unique(y)
         if len(cls) != 2:
@@ -194,6 +325,20 @@ class FisherClassifier(BaseEstimator, ClassifierMixin):
         self.th = self._optimal_theta(X, y, lower, upper)
         
     def predict(self, X, th=None):
+        """Predict the value of unseen data
+        
+        Parameter
+        ---------
+        X: array-like
+            unsee input vectors
+        th: float, default None
+            threshold in transformed space
+            
+        Returns
+        -------
+        pred: array-like,
+            predicitons of unseen data
+        """
         if not th:
             th = self.th
         x_1d = np.squeeze(np.asarray(np.mat(X) * self.w))
@@ -201,10 +346,42 @@ class FisherClassifier(BaseEstimator, ClassifierMixin):
         return np.array(pred)
     
     def _kde(self, X):
+        """Estimate a gaussian kernel
+        
+        Parameter
+        ---------
+        X: array-like,
+            input vectors
+        
+        Returns
+        -------
+        kde: scipy.stats.gaussian_kde,
+            kernel density estimate of input data
+        """
         X = np.squeeze(np.asarray(X))
         return stats.gaussian_kde(X)
     
     def _optimal_theta(self, X, y, lower, upper, res=100):
+        """Optimal threshold for classification
+        
+        Parameter
+        ---------
+        X: array-like,
+            input vectors
+        y: array-like,
+            target vectors
+        lower: float,
+            lower value for threshold
+        upper: float,
+            upper value for threshold
+        res: int, default=100,
+            stepsize of threshold calculation
+        
+        Returns
+        -------
+        th: float,
+            optimal threshold
+        """
         errors = []
         for t in np.linspace(lower, upper, res):
             preds = self.predict(X, th=t)
@@ -214,8 +391,28 @@ class FisherClassifier(BaseEstimator, ClassifierMixin):
         return np.linspace(lower, upper, res)[best_th_idx]
         
     def _peak_kde(self, kde, lower, upper, res=100):
+        """Peak of estimated probability density function
+        
+        Parameter
+        ---------
+        kde: scipy.stats.gaussian_kde,
+            estimated kernel density
+        lower: float,
+            lower value for peak
+        upper: float,
+            upper value for peak
+        res: int, default=100,
+            stepsize of peak calculation
+        
+        Returns
+        -------
+        peak: float,
+            argmax of probability density function
+        """
         peak_idx = np.argmax(kde.pdf(np.linspace(lower, upper, res)))
         return np.linspace(lower, upper, res)[peak_idx]
+
+
 ########## UTILS ##########
 def build_design_matrix(X, PHI):
     """Build the design matrix
@@ -276,6 +473,17 @@ def maximum_likelihood_regression(X, PHI, Y, reg=0):
     return np.squeeze(np.asarray(WM))
 
 def plot_posterior(br, x_min, x_max):
+    """Plot posterior distribution
+    
+    Parameter
+    ---------
+    br: BayesRegression,
+        fitted Bayes Regressor
+    xmin: float,
+        minimal x for plotting
+    xmax: float,
+        maximal x for plotting
+    """
     x = np.linspace(x_min, x_max, 100)
     mu, sig = br.predict(x)
     plt.plot(x, mu)
@@ -288,6 +496,17 @@ def plot_posterior(br, x_min, x_max):
     
     
 def plot_belief(br, lower, upper, resolution=100):
+    """Plot prior belief
+    
+    Parameter
+    ---------
+    br: BayesRegression,
+        fitted Bayes Regressor
+    lower: float,
+        minimal x, y for plotting
+    upper: float,
+        maximal x, y for plotting
+    """
     xx, yy = np.meshgrid(
         np.linspace(lower, upper, resolution),
         np.linspace(lower, upper, resolution)

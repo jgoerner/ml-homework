@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from mlxtend.plotting import plot_confusion_matrix
 from sklearn.preprocessing import LabelEncoder
 
-# TODO refactor to capsulated method
+
 def multiclass_confusion_matrix(y, y_pred, name="", only_wrong=False, figsize=(5, 5), normed=False):
     """Plot a confusion multiclass confusion matrix
     
@@ -61,6 +61,7 @@ def multiclass_confusion_matrix(y, y_pred, name="", only_wrong=False, figsize=(5
 
     return cm, label_dict
 
+
 def plot_decision_planes(lsc, xmin, xmax, ymin, ymax, resolution=100):
     """Plot decision planes of a Least-Squares-Classifier
     
@@ -91,7 +92,8 @@ def plot_decision_planes(lsc, xmin, xmax, ymin, ymax, resolution=100):
             x2 = get_x2(f1, f2, x)
             plt.plot(x, x2, c="k", linestyle="--", alpha=0.3)
     plt.ylim(ymin, ymax); 
-    
+
+
 def get_x2(f1, f2, x):
     """Helper to extract x2 from two discriminant functions
     
@@ -112,6 +114,7 @@ def get_x2(f1, f2, x):
     num, denom = np.split((f1-f2).A.flatten(), [-1])
     x2 = - np.dot(num, np.vstack([np.ones_like(x), x])) / denom
     return x2
+
 
 def plot_decision_regions(clf, xmin, xmax, ymin, ymax, resolution=100):
     """Plot decision regions for a classifier

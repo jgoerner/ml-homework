@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from scipy.spatial import KDTree
-from sklearn.metrics.regression import mean_squared_error as mse
 
 ########## CLASSIFIER ##########
 class KNNC(BaseEstimator, ClassifierMixin):
@@ -288,7 +287,7 @@ class KNNR(BaseEstimator, RegressorMixin):
             mean squared error
         """
         pred = self.predict(X)
-        return mse(y, pred)
+        return np.mean((pred-y)**2)
         
     def _calc_distance(self, x):
         """Calculate distances

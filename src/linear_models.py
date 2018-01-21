@@ -218,6 +218,7 @@ class LeastSquaresClassifier(BaseEstimator, ClassifierMixin):
         y: array-like
             target vector
         """
+        y = y.reshape(-1, 1) # for robustnes
         X_ = self._add_dummy(X)
         # inspect if two or more classes
         if len(np.unique(y)) > 2:
@@ -308,7 +309,7 @@ class FisherClassifier(BaseEstimator, ClassifierMixin):
         mu2 = np.mat(X[y==cls[1]]).mean(axis=0).T
         s1 = (X[y==cls[0]].T - mu1) * (X[y==cls[0]].T - mu1).T
         s2 = (X[y==cls[1]].T - mu2) * (X[y==cls[1]].T - mu2).T
-        self.w = np.linalg.inv(s1+s2) * (mu2 - mu1)
+        self.w = np.linalg.pinv(s1+s2) * (mu2 - mu1) # handle det(M)=0 cases
         
         # compare mean of disctributions
         kde1 = self._kde(X[y==cls[0]] * self.w)
@@ -431,9 +432,9 @@ class Perceptron(BaseEstimator, ClassifierMixin):
     def __init__(self, phi, w=None, t=1, max_iter=100):
         self.t = t
         self.phi = phi
-        if w and (len(w) != len(phi)):
+        if (w is not None) and (len(w) != len(phi)):
             raise ValueError("Number of weights ({}) must equal number of features ({})".format(len(w), len(phi)))
-        if not w:
+        if w is None:
             self.w = np.random.normal(size=len(phi))
         else:
             self.w = np.array(w)

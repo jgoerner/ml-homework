@@ -325,12 +325,12 @@ class FisherClassifier(BaseEstimator, ClassifierMixin):
         self.th = self._optimal_theta(X, y, lower, upper)
         
     def predict(self, X, th=None):
-        """Predict the value of unseen data
+        """Predict the class of unseen data
         
         Parameter
         ---------
         X: array-like
-            unsee input vectors
+            unseen input vectors
         th: float, default None
             threshold in transformed space
             
@@ -411,6 +411,103 @@ class FisherClassifier(BaseEstimator, ClassifierMixin):
         """
         peak_idx = np.argmax(kde.pdf(np.linspace(lower, upper, res)))
         return np.linspace(lower, upper, res)[peak_idx]
+
+
+class Perceptron(BaseEstimator, ClassifierMixin):
+    """Perceptron for binary classification
+    
+    Parameter
+    ---------
+    phi: dict,
+        basis functions
+    w: array-like, default=None,
+        initial weights 
+    t: float, default=1
+        laerning step size
+    max_iter: int, default=100,
+        maximal number of iterations    
+    """
+    
+    def __init__(self, phi, w=None, t=1, max_iter=100):
+        self.t = t
+        self.phi = phi
+        if w and (len(w) != len(phi)):
+            raise ValueError("Number of weights ({}) must equal number of features ({})".format(len(w), len(phi)))
+        if not w:
+            self.w = np.random.normal(size=len(phi))
+        else:
+            self.w = np.array(w)
+        self.max_iter = max_iter
+        self.updates = 0
+        self.w_history = [self.w.copy()]
+            
+    def fit(self, X, y):
+        """Fit the Classifier to the data set
+        
+        Parameter
+        ---------
+        X: array-like
+            input vectors
+        y: array-like
+            target vector
+        """
+        # check for binary classification
+        cls = np.unique(y)
+        if len(cls) != 2:
+            raise NotImplementedError("Only implemented for n=2 classes")
+            
+        # build feature vector
+        X_ = build_design_matrix(X, self.phi).values
+        
+        # reset updates
+        self.updates = 0
+        
+        # iterate over epochs
+        for epoch in range(1, self.max_iter+1):
+            err = 0
+            # iterate over complete dataset
+            for row, label in zip(X_, y):
+                pred = np.dot(self.w, row)
+
+                # if missclassificaiton, update
+                if np.sign(pred) != np.sign(label):
+                    err += 1
+                    self._update_w(row, label)
+                    
+            # early convergence
+            if err == 0:
+                print("Early success in epoch {} ({} updates)".format(epoch, self.updates))
+                break
+    
+    def predict(self, X):
+        """Predict the class of unseen data
+        
+        Parameter
+        ---------
+        X: array-like
+            unseen input vectors
+            
+        Returns
+        -------
+        pred: array-like,
+            predicitons of unseen data
+        """
+        X_ = build_design_matrix(np.asarray(X), self.phi).values
+        return np.sign(np.dot(self.w, X_.T))
+    
+    def _update_w(self, row, label):
+        """Update internal weights
+        
+        Parameter
+        ---------
+        row: array-like,
+            single input vector
+        label: int,
+            target label
+        """
+        self.w += row * label
+        self.updates +=1
+        self.w_history.append(self.w.copy()) # otherwise just reference
 
 
 ########## UTILS ##########
